@@ -39,9 +39,7 @@ namespace Torch.Server.Managers
 
 
         private static readonly Logger Log = LogManager.GetLogger(nameof(InstanceManager));
-        [Dependency]
-        private FilesystemManager _filesystemManager;
-
+        
         public InstanceManager(ITorchBase torchInstance) : base(torchInstance)
         {
             

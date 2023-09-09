@@ -19,6 +19,7 @@ using Torch.API;
 using Torch.API.Managers;
 using Torch.API.Session;
 using Torch.Commands;
+using Torch.Managers;
 using Torch.Managers.PatchManager;
 using Torch.Mod;
 using Torch.Mod.Messages;
@@ -65,7 +66,11 @@ namespace Torch.Server
             AddManager(DedicatedInstance);
             AddManager(new EntityControlManager(this));
             AddManager(new RemoteAPIManager(this));
+            AddManager(new UpdateManager(this));
+            AddManager(new GameUpdateManager(this));
 
+            Managers.GetManager<UpdateManager>().CheckAndUpdateTorch();
+            
             var sessionManager = Managers.GetManager<ITorchSessionManager>();
             sessionManager.AddFactory(x => new MultiplayerManagerDedicated(this));
             
@@ -140,6 +145,8 @@ namespace Torch.Server
         /// <inheritdoc />
         public override void Init()
         {
+            var updateManager = Managers.GetManager<UpdateManager>();
+            
             Log.Info("Initializing server");
             MySandboxGame.IsDedicated = true;
             base.Init();
@@ -207,15 +214,19 @@ namespace Torch.Server
             void DoRestart(Task<GameSaveResult> task, object torch0)
             {
                 var torch = (TorchServer)torch0;
-                torch.Stop();
-                // TODO clone this
                 var config = (TorchConfig)torch.Config;
+                
+                if (IsRunning)
+                {
+                    config.TempAutostart = true;
+                    torch.Stop();
+                }
+                
                 LogManager.Flush();
 
                 string exe = Assembly.GetExecutingAssembly().Location;
                 Debug.Assert(exe != null);
                 config.WaitForPID = Process.GetCurrentProcess().Id.ToString();
-                config.TempAutostart = true;
                 Process.Start(exe, config.ToString());
 
                 Process.GetCurrentProcess().Kill();

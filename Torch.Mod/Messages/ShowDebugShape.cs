@@ -3,7 +3,6 @@ using ProtoBuf;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
-using System;
 using System.Collections.Generic;
 using VRage.Game;
 using VRage.Game.Entity;
@@ -64,9 +63,9 @@ namespace Torch.Mod.Messages
             //MyAPIGateway.Utilities.ShowMessage("Torch", $"Hit process client on debug draw!");
 
             //If its the same unique name, we can add it
-            if(AllDraws.ContainsKey(uniqueName))
+            if (AllDraws.TryGetValue(uniqueName, out DrawDebug draw))
             {
-                AllDraws[uniqueName].drawObjects.AddList(drawObjects);
+                draw.drawObjects.AddList(drawObjects);
             }
             else
             {
@@ -154,17 +153,11 @@ namespace Torch.Mod.Messages
         //static update to update all draws
         public static void refreshAllDraws()
         {
-            try
-            {
+            //MyRenderProxy.DebugClearPersistentMessages();
 
-                foreach (var draw in AllDraws)
-                {
-                    draw.Value.refreshDraw();
-                }
-
-            }catch(Exception ex)
+            foreach (var draw in AllDraws)
             {
-                //do nothings
+                draw.Value.refreshDraw();
             }
         }
 
@@ -264,19 +257,14 @@ namespace Torch.Mod.Messages
         public void drawOBBEntity()
         {
             //This will keep updating the draw for live grid box preview
-            //Do not keep searching for entity on draw 
-            if (searchAttempts > 250 || entityID == 0)
+            //Do not keep searching for entity on draw
+            if (searchAttempts > 10)
                 return;
 
-
-            
-
-
-            entRef = MyEntities.GetEntityById(entityID);
-            if (entRef == null )
+            if (entRef == null && entityID != 0)
             {
+                entRef = MyEntities.GetEntityById(entityID);
                 searchAttempts++;
-                return;
             }
 
 
