@@ -216,7 +216,7 @@ namespace Torch.Commands
         }
 
         [Command("plugins", "Lists the currently loaded plugins.")]
-        [Permission(MyPromoteLevel.None)]
+        [Permission(MyPromoteLevel.Admin)]
         public void Plugins()
         {
             var plugins = Context.Torch.Managers.GetManager<PluginManager>()?.Plugins.Select(p => p.Value.Name) ??
@@ -265,6 +265,7 @@ namespace Torch.Commands
             }
         
             _restartPending = true;
+            TorchBase.Instance.IsRestartPending = _restartPending;
             
             Task.Run(() =>
             {
@@ -364,25 +365,41 @@ namespace Torch.Commands
                     Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
                            .SendMessageAsSelf($"Restart cancelled.");
 
+                    Log.Warn("Restart cancelled by user.");
+
                     _restartPending = false;
+                    TorchBase.Instance.IsRestartPending = _restartPending;
+                    
                     _cancelRestart = false;
                     yield break;
                 }
-                    
-                if (i >= 60 && i % 60 == 0)
+
+                // Send a message every hour
+                if (i >= 3600 && i % 3600 == 0)
+                {
+                    Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
+                        .SendMessageAsSelf($"Restarting server in {i / 3600} hour{Pluralize(i / 3600)}.");
+                }
+                // Send a message every 15 minutes for the last hour
+                else if (i < 3600 && i >= 900 && i % 900 == 0)
                 {
                     Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
                         .SendMessageAsSelf($"Restarting server in {i / 60} minute{Pluralize(i / 60)}.");
-                    yield return null;
                 }
-                else if (i > 0)
+                // Send a message every minute for the last 10 minutes
+                else if (i < 600 && i >= 60 && i % 60 == 0)
                 {
-                    if (i < 11)
-                        Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
-                            .SendMessageAsSelf($"Restarting server in {i} second{Pluralize(i)}.");
-                    yield return null;
+                    Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
+                        .SendMessageAsSelf($"Restarting server in {i / 60} minute{Pluralize(i / 60)}.");
                 }
-                else
+                // Send a message every second for the last 10 seconds
+                else if (i < 11 && i > 0)
+                {
+                    Context.Torch.CurrentSession.Managers.GetManager<IChatManagerClient>()
+                        .SendMessageAsSelf($"Restarting server in {i} second{Pluralize(i)}.");
+                }
+                // Final execution block
+                else if (i == 0)
                 {
                     AutoSavePatch.SaveFromCommand = true;
                     if (save)
@@ -392,14 +409,15 @@ namespace Torch.Commands
                            .SendMessageAsSelf($"Saving game before restart.");
                     }
 
-                    Log.Info("Restarting server.");
+                    Log.Warn("Initiating server restart.");
                     Context.Torch.Invoke(() => Context.Torch.Restart(save));
-                        
                     yield break;
                 }
+
+                yield return null;
             }
         }
-
+        
         private string Pluralize(int num)
         {
             return num == 1 ? "" : "s";

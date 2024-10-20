@@ -15,10 +15,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using NLog;
+using NLog.Config;
 using NLog.Targets.Wrappers;
 using Sandbox;
 using Torch.API;
 using Torch.API.Managers;
+using Torch.Patches;
 using Torch.Server.Managers;
 using MessageBoxResult = System.Windows.MessageBoxResult;
 
@@ -31,6 +33,8 @@ namespace Torch.Server
     {
         private TorchServer _server;
         private TorchConfig _config;
+        private static Logger _log = LogManager.GetCurrentClassLogger();
+        public static TorchUI Instance;
 
         private bool _autoscrollLog = true;
         private bool _needScroll;
@@ -45,6 +49,18 @@ namespace Torch.Server
             //TODO: data binding for whole server
             DataContext = server;
             InitializeComponent();
+
+            var config = LogManager.Configuration;
+            var customTarget = new NlogCustomTarget()
+            {
+                Name = "NlogCustomTarget"
+            };
+            config.AddTarget(customTarget);
+            var rule = new LoggingRule("*", LogLevel.Warn, customTarget); // Adjust the log level as needed
+            config.LoggingRules.Add(rule);
+
+            // Apply changes
+            LogManager.Configuration = config;
 
             AttachConsole();
 
@@ -61,6 +77,7 @@ namespace Torch.Server
             Themes.uiSource = this;
             Themes.SetConfig(_config);
             Title = $"{_config.InstanceName} - Torch {server.TorchVersion}, SE {server.GameVersion}";
+            Instance = this;
             
             Loaded += TorchUI_Loaded;
         }
@@ -179,6 +196,7 @@ namespace Torch.Server
 
             //_config.Save(); //you idiot
 
+            _log.Info("Closing Torch...");
             if (_server?.State == ServerState.Running)
                 _server.Stop();
 

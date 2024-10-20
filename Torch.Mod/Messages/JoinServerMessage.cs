@@ -43,10 +43,10 @@ namespace Torch.Mod.Messages
             }
 
             MyAPIGateway.Parallel.StartBackground(() =>
-                                                  {
-                                                      MyAPIGateway.Parallel.Sleep(Delay);
-                                                      MyAPIGateway.Multiplayer.JoinServer(Address);
-                                                  });
+            {
+                MyAPIGateway.Parallel.Sleep(Delay);
+                MyAPIGateway.Multiplayer.JoinServer(Address);
+            });
         }
 
         public override void ProcessServer()
